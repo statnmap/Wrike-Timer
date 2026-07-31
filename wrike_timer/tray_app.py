@@ -122,7 +122,7 @@ class TrayApp:
                     self.client.post_timelog(entry["task_id"], entry["hours"], entry["tracked_date"], entry["comment"])
                     log.info("Retried timelog succeeded: task=%s", entry["task_id"])
                 except WrikeApiError:
-                    log.warning("Retry still failing for task=%s", entry["task_id"])
+                    log.warning("Retry still failing for task=%s", entry["task_id"], exc_info=True)
                     remaining.append(entry)
             self.state["pending_timelogs"] = remaining
             self.store.save(self.state)

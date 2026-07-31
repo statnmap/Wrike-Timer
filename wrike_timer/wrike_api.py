@@ -81,8 +81,9 @@ class WrikeClient:
         return [{"id": task["id"], "title": task["title"]} for task in data["data"]]
 
     def post_timelog(self, task_id, hours, tracked_date, comment=""):
+        # This endpoint takes its fields as query parameters, not a request body.
         self._request(
             "POST",
-            f"/timelogs/task/{task_id}",
-            data={"hours": hours, "trackedDate": tracked_date, "comment": comment},
+            f"/tasks/{task_id}/timelogs",
+            params={"hours": hours, "trackedDate": tracked_date, "comment": comment},
         )

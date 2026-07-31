@@ -101,8 +101,8 @@ def test_post_timelog_sends_expected_payload():
     client.post_timelog("A", 1.5, "2026-07-31", "worked on it")
     method, url, kwargs = session.calls[0]
     assert method == "POST"
-    assert url.endswith("/timelogs/task/A")
-    assert kwargs["data"] == {"hours": 1.5, "trackedDate": "2026-07-31", "comment": "worked on it"}
+    assert url.endswith("/tasks/A/timelogs")
+    assert kwargs["params"] == {"hours": 1.5, "trackedDate": "2026-07-31", "comment": "worked on it"}
 
 
 def test_retries_on_429_then_succeeds(monkeypatch):
