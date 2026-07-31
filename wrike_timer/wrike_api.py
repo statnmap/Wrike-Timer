@@ -1,7 +1,9 @@
 """Thin client for the parts of the Wrike API v4 this app needs."""
 
+import json
 import logging
 import time
+from datetime import datetime, timedelta, timezone
 
 import requests
 
@@ -51,14 +53,20 @@ class WrikeClient:
         data = self._request("GET", "/contacts", params={"me": "true"})
         return data["data"][0]["id"]
 
-    def get_recent_task_ids(self, limit=10):
+    def get_recent_task_ids(self, limit=10, lookback_days=30):
+        # /timelogs doesn't support sortField/sortOrder (HTTP 400 if passed), and
+        # omitting pageSize returns the user's *entire* timelog history in one
+        # response. Bound the request with a createdDate window instead, and sort
+        # client-side since the API gives no ordering guarantee.
+        start = (datetime.now(timezone.utc) - timedelta(days=lookback_days)).strftime("%Y-%m-%dT%H:%M:%SZ")
         data = self._request(
             "GET",
             "/timelogs",
-            params={"me": "true", "sortField": "CreatedDate", "sortOrder": "Desc"},
+            params={"me": "true", "pageSize": 1000, "createdDate": json.dumps({"start": start})},
         )
+        entries = sorted(data["data"], key=lambda entry: entry["createdDate"], reverse=True)
         task_ids = []
-        for entry in data["data"]:
+        for entry in entries:
             task_id = entry.get("taskId")
             if task_id and task_id not in task_ids:
                 task_ids.append(task_id)

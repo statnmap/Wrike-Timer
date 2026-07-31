@@ -63,7 +63,10 @@ class TrayApp:
 
     def _refresh_recent_tasks(self):
         try:
-            task_ids = self.client.get_recent_task_ids(limit=self.cfg["recent_tasks_limit"])
+            task_ids = self.client.get_recent_task_ids(
+                limit=self.cfg["recent_tasks_limit"],
+                lookback_days=self.cfg["recent_tasks_lookback_days"],
+            )
             tasks_by_id = {t["id"]: t for t in self.client.get_tasks(task_ids)}
             ordered = [tasks_by_id[tid] for tid in task_ids if tid in tasks_by_id]
         except WrikeApiError:

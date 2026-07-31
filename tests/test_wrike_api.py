@@ -44,13 +44,14 @@ def test_get_my_contact_id_returns_first_contact_id():
     assert client.get_my_contact_id() == "KUAXXXX"
 
 
-def test_get_recent_task_ids_dedupes_and_respects_limit():
+def test_get_recent_task_ids_sorts_by_created_date_desc_dedupes_and_respects_limit():
+    # Deliberately out of order: the API gives no ordering guarantee.
     timelogs = {
         "data": [
-            {"taskId": "A"},
-            {"taskId": "B"},
-            {"taskId": "A"},
-            {"taskId": "C"},
+            {"taskId": "B", "createdDate": "2026-07-20T10:00:00Z"},
+            {"taskId": "A", "createdDate": "2026-07-31T10:00:00Z"},
+            {"taskId": "A", "createdDate": "2026-07-25T10:00:00Z"},  # older dupe of A, ignored
+            {"taskId": "C", "createdDate": "2026-07-10T10:00:00Z"},
         ]
     }
     client, _ = make_client([FakeResponse(json_data=timelogs)])
@@ -58,9 +59,25 @@ def test_get_recent_task_ids_dedupes_and_respects_limit():
 
 
 def test_get_recent_task_ids_skips_entries_without_task_id():
-    timelogs = {"data": [{"taskId": None}, {"taskId": "A"}]}
+    timelogs = {
+        "data": [
+            {"taskId": None, "createdDate": "2026-07-31T10:00:00Z"},
+            {"taskId": "A", "createdDate": "2026-07-30T10:00:00Z"},
+        ]
+    }
     client, _ = make_client([FakeResponse(json_data=timelogs)])
     assert client.get_recent_task_ids(limit=10) == ["A"]
+
+
+def test_get_recent_task_ids_does_not_send_unsupported_sort_params():
+    timelogs = {"data": [{"taskId": "A", "createdDate": "2026-07-31T10:00:00Z"}]}
+    client, session = make_client([FakeResponse(json_data=timelogs)])
+    client.get_recent_task_ids(limit=10, lookback_days=30)
+    _, _, kwargs = session.calls[0]
+    assert "sortField" not in kwargs["params"]
+    assert "sortOrder" not in kwargs["params"]
+    assert kwargs["params"]["pageSize"] == 1000
+    assert "createdDate" in kwargs["params"]
 
 
 def test_get_tasks_returns_id_and_title():

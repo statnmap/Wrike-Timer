@@ -22,6 +22,7 @@ LOG_PATH = DATA_DIR / "wrike-timer.log"
 DEFAULT_CONFIG = {
     "refresh_interval_seconds": 30,
     "recent_tasks_limit": 10,
+    "recent_tasks_lookback_days": 30,
 }
 
 log = logging.getLogger(__name__)
