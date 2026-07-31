@@ -4,14 +4,37 @@
 import argparse
 import getpass
 import logging
+import os
 import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from wrike_timer import config, tray_app
+from wrike_timer import config
 
 AUTOSTART_DIR = Path.home() / ".config" / "autostart"
 AUTOSTART_PATH = AUTOSTART_DIR / "wrike-timer.desktop"
+
+# Snap-packaged terminals (e.g. VS Code's integrated terminal) inject GTK/GIO env
+# vars pointing at /snap/.../usr/lib, built against the snap's bundled libc. When
+# pystray loads GTK from a non-snap Python, that mismatch causes a `symbol lookup
+# error` on libpthread. Only stripped when they actually point at /snap/, so a
+# normal terminal is unaffected.
+_SNAP_ENV_VARS = (
+    "GTK_PATH",
+    "GTK_EXE_PREFIX",
+    "GTK_IM_MODULE_FILE",
+    "LOCPATH",
+    "GIO_MODULE_DIR",
+    "GSETTINGS_SCHEMA_DIR",
+    "XDG_DATA_DIRS",
+    "XDG_DATA_HOME",
+)
+
+
+def _sanitize_snap_env():
+    for name in _SNAP_ENV_VARS:
+        if "/snap/" in os.environ.get(name, ""):
+            os.environ.pop(name, None)
 
 
 def setup_logging():
@@ -21,8 +44,19 @@ def setup_logging():
     logging.basicConfig(level=logging.INFO, handlers=[handler])
 
 
-def cmd_set_token():
-    token = getpass.getpass("Token API Wrike (Permanent Access Token) : ").strip()
+def cmd_set_token(token_arg=None):
+    if token_arg is not None:
+        token = token_arg.strip()
+    else:
+        try:
+            token = getpass.getpass("Token API Wrike (Permanent Access Token) : ").strip()
+        except EOFError:
+            print(
+                "Saisie interactive impossible (stdin non-TTY). "
+                "Lance cette commande depuis un vrai terminal, ou utilise --token <valeur>.",
+                file=sys.stderr,
+            )
+            return 1
     if not token:
         print("Token vide, abandon.", file=sys.stderr)
         return 1
@@ -60,16 +94,22 @@ def cmd_uninstall_autostart():
 def main():
     parser = argparse.ArgumentParser(description="Wrike Timer — chrono tray natif pour Wrike")
     parser.add_argument("--set-token", action="store_true", help="Configurer le token API Wrike")
+    parser.add_argument(
+        "--token", metavar="TOKEN", help="Token à utiliser avec --set-token, évite le prompt interactif"
+    )
     parser.add_argument("--install-autostart", action="store_true", help="Lancer automatiquement au login")
     parser.add_argument("--uninstall-autostart", action="store_true", help="Retirer le lancement automatique")
     args = parser.parse_args()
 
     if args.set_token:
-        return cmd_set_token()
+        return cmd_set_token(args.token)
     if args.install_autostart:
         return cmd_install_autostart()
     if args.uninstall_autostart:
         return cmd_uninstall_autostart()
+
+    _sanitize_snap_env()
+    from wrike_timer import tray_app  # imported lazily: pulls in pystray/GTK, only needed to run the tray
 
     setup_logging()
     token = config.get_token()

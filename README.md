@@ -19,6 +19,7 @@ Le menu liste les 10 derniers tickets sur lesquels tu as loggé du temps ; un cl
   puis active-la via l'app "Extensions" ou https://extensions.gnome.org (même contrainte de reconnexion sous Wayland).
 - KDE, XFCE, Cinnamon, MATE : support natif, rien à installer.
 - macOS / Windows : `pystray` bascule automatiquement sur le bon backend — non testé par ce projet (développé/vérifié sur Ubuntu GNOME) mais devrait fonctionner tel quel.
+- **Terminal intégré VS Code (paquet snap)** : si tu lances l'app depuis ce terminal, `symbol lookup error: ... libpthread.so.0` peut apparaître — le snap injecte des variables GTK/GIO qui pointent vers ses propres bibliothèques, incompatibles avec le GTK système. `wrike_timer.py` neutralise automatiquement ces variables au lancement (uniquement celles qui pointent vers `/snap/`, donc sans effet dans un terminal normal) ; si le souci persiste, lance l'app depuis un terminal système classique.
 
 ## Installation
 
@@ -39,6 +40,8 @@ python3 -m venv --system-site-packages .venv
    .venv/bin/python wrike_timer.py --set-token
    ```
    Le token est saisi de façon masquée et stocké dans le trousseau système (gnome-keyring ou équivalent). Si aucun trousseau n'est disponible sur la machine, il est stocké en fallback dans `~/.config/wrike-timer/config.json` (créé avec les permissions `600`).
+
+   ⚠️ Cette commande a besoin d'un vrai terminal interactif. Si tu la lances depuis un contexte non-interactif (script, passthrough), la saisie masquée échoue avec `EOFError` — utilise plutôt `--set-token --token <valeur>` (le token apparaît alors en clair dans l'historique du shell, donc uniquement pour du scripting ponctuel).
 
 **Ne partage et ne committe jamais ton token.** Chaque personne qui utilise ce repo génère le sien.
 
