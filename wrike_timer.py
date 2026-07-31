@@ -4,7 +4,6 @@
 import argparse
 import getpass
 import logging
-import os
 import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -13,28 +12,6 @@ from wrike_timer import config
 
 AUTOSTART_DIR = Path.home() / ".config" / "autostart"
 AUTOSTART_PATH = AUTOSTART_DIR / "wrike-timer.desktop"
-
-# Snap-packaged terminals (e.g. VS Code's integrated terminal) inject GTK/GIO env
-# vars pointing at /snap/.../usr/lib, built against the snap's bundled libc. When
-# pystray loads GTK from a non-snap Python, that mismatch causes a `symbol lookup
-# error` on libpthread. Only stripped when they actually point at /snap/, so a
-# normal terminal is unaffected.
-_SNAP_ENV_VARS = (
-    "GTK_PATH",
-    "GTK_EXE_PREFIX",
-    "GTK_IM_MODULE_FILE",
-    "LOCPATH",
-    "GIO_MODULE_DIR",
-    "GSETTINGS_SCHEMA_DIR",
-    "XDG_DATA_DIRS",
-    "XDG_DATA_HOME",
-)
-
-
-def _sanitize_snap_env():
-    for name in _SNAP_ENV_VARS:
-        if "/snap/" in os.environ.get(name, ""):
-            os.environ.pop(name, None)
 
 
 def setup_logging():
@@ -108,7 +85,9 @@ def main():
     if args.uninstall_autostart:
         return cmd_uninstall_autostart()
 
-    _sanitize_snap_env()
+    from wrike_timer.env import sanitize_snap_env
+
+    sanitize_snap_env()
     from wrike_timer import tray_app  # imported lazily: pulls in pystray/GTK, only needed to run the tray
 
     setup_logging()

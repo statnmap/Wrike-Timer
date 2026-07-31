@@ -20,6 +20,11 @@ COLOR_IDLE = (120, 120, 120, 255)
 COLOR_ACTIVE = (220, 50, 47, 255)
 COLOR_UNCONFIGURED = (200, 160, 0, 255)
 
+# A gap this large between two heartbeats while a timer was active means the
+# app (or the machine) wasn't running for a while — suspend, shutdown, crash —
+# not that someone genuinely worked uninterrupted for that long.
+HEARTBEAT_GAP_WARNING_SECONDS = 5 * 60
+
 
 def _make_icon(color):
     image = Image.new("RGBA", (ICON_SIZE, ICON_SIZE), (0, 0, 0, 0))
@@ -39,6 +44,15 @@ class TrayApp:
             timer.TimerState.from_dict(self.state["active_timer"]) if self.state.get("active_timer") else None
         )
         self.today_total_hours = None
+        self.resume_gap_seconds = None
+        if self.active_timer:
+            last_heartbeat = self.state.get("last_heartbeat")
+            if last_heartbeat is not None:
+                gap = timer.gap_seconds(last_heartbeat, time.time())
+                if gap > HEARTBEAT_GAP_WARNING_SECONDS:
+                    self.resume_gap_seconds = gap
+                    log.warning("Resumed an active timer after a %.0fs gap (app wasn't running)", gap)
+
         self.lock = threading.RLock()
         self.stop_event = threading.Event()
         self.icon = pystray.Icon(
@@ -49,6 +63,7 @@ class TrayApp:
         self.icon.menu = self._build_menu()
 
     def run(self):
+        self._last_tick = time.time()
         self._refresh_recent_tasks()
         self._refresh_today_total()
         self._refresh_icon_and_menu()
@@ -89,6 +104,10 @@ class TrayApp:
         with self.lock:
             self.today_total_hours = total
 
+    def _update_heartbeat(self):
+        self.state["last_heartbeat"] = time.time()
+        self.store.save(self.state)
+
     def _post_or_queue(self, entry):
         try:
             self.client.post_timelog(entry["task_id"], entry["hours"], entry["tracked_date"], entry["comment"])
@@ -116,6 +135,7 @@ class TrayApp:
             active = self.active_timer
             duration_seconds, tracked_date = timer.stop(active)
             self.active_timer = None
+            self.resume_gap_seconds = None
             self._persist_active_timer()
             entry = {
                 "task_id": active.task_id,
@@ -172,6 +192,11 @@ class TrayApp:
         if self.active_timer:
             elapsed = timer.format_duration(timer.elapsed_seconds(self.active_timer))
             items.append(pystray.MenuItem(f"🔴 {self.active_timer.task_title} — {elapsed}", self._on_stop))
+            if self.resume_gap_seconds:
+                gap_label = timer.format_hours(self.resume_gap_seconds / 3600)
+                items.append(
+                    pystray.MenuItem(f"⚠️ Reprise après ~{gap_label} d'interruption détectée", None, enabled=False)
+                )
             items.append(pystray.Menu.SEPARATOR)
 
         recent = self.state.get("recent_tasks", [])
@@ -201,17 +226,26 @@ class TrayApp:
             now = time.time()
             with self.lock:
                 if self.active_timer:
+                    # A tick that took much longer than the ~1s wait means the
+                    # machine was suspended while the app itself kept running.
+                    tick_gap = timer.gap_seconds(self._last_tick, now)
+                    if tick_gap > HEARTBEAT_GAP_WARNING_SECONDS and not self.resume_gap_seconds:
+                        self.resume_gap_seconds = tick_gap
+                        log.warning("Detected a %.0fs gap while a timer was active (system suspend?)", tick_gap)
+
                     elapsed = timer.format_duration(timer.elapsed_seconds(self.active_timer))
                     try:
                         self.icon.title = f"{self.active_timer.task_title} — {elapsed}"
                     except Exception:
                         log.debug("Tooltip update not supported by this tray backend", exc_info=True)
+            self._last_tick = now
 
             if now - last_refresh >= self.cfg["refresh_interval_seconds"]:
                 self._refresh_recent_tasks()
                 self._refresh_today_total()
                 if self.state.get("pending_timelogs"):
                     self._on_retry_pending(self.icon, None)
+                self._update_heartbeat()
                 self._refresh_icon_and_menu()
                 last_refresh = now
 

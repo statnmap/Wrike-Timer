@@ -63,3 +63,11 @@ def test_format_hours():
 def test_format_hours_rounds_to_nearest_minute():
     assert timer.format_hours(1.001) == "1h00"
     assert timer.format_hours(1.99999) == "2h00"
+
+
+def test_gap_seconds():
+    assert timer.gap_seconds(1000.0, 1090.0) == 90.0
+
+
+def test_gap_seconds_never_negative():
+    assert timer.gap_seconds(1000.0, 500.0) == 0

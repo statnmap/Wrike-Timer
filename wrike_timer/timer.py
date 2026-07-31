@@ -41,6 +41,10 @@ def elapsed_seconds(state, now=None):
     return max(0.0, end - state.started_at)
 
 
+def gap_seconds(previous_timestamp, current_timestamp):
+    return max(0.0, current_timestamp - previous_timestamp)
+
+
 def format_duration(seconds):
     total = int(seconds)
     hours, remainder = divmod(total, 3600)
