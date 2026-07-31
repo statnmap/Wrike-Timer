@@ -52,3 +52,14 @@ def test_timer_state_roundtrip_through_dict():
     state = timer.start("123", "Ticket", now=1000.0)
     restored = timer.TimerState.from_dict(state.to_dict())
     assert restored == state
+
+
+def test_format_hours():
+    assert timer.format_hours(0) == "0h00"
+    assert timer.format_hours(3.75) == "3h45"
+    assert timer.format_hours(0.5) == "0h30"
+
+
+def test_format_hours_rounds_to_nearest_minute():
+    assert timer.format_hours(1.001) == "1h00"
+    assert timer.format_hours(1.99999) == "2h00"

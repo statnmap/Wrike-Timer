@@ -2,7 +2,7 @@
 
 Chrono de suivi de temps dans le tray système, qui parle uniquement à l'API Wrike — aucun service tiers, aucune donnée partagée avec Toggl/Clockify/etc.
 
-Le menu liste les 10 derniers tickets sur lesquels tu as loggé du temps ; un clic démarre le chrono, un clic sur l'entrée active l'arrête et pousse le temps vers Wrike.
+Le menu liste les 10 derniers tickets sur lesquels tu as loggé du temps ; un clic démarre le chrono, un clic sur l'entrée active l'arrête et pousse le temps vers Wrike. Il affiche aussi le total d'heures loggées aujourd'hui (tous tickets confondus, que ça vienne de l'app ou directement du site Wrike), et peut proposer un lien direct vers ta feuille de temps.
 
 ## Prérequis
 
@@ -54,6 +54,17 @@ python3 -m venv --system-site-packages .venv
 L'icône apparaît dans le tray. Le menu liste les 10 derniers tickets loggés ; un clic démarre le chrono, l'entrée "🔴 ..." en haut du menu permet de l'arrêter et pousse automatiquement le temps sur Wrike.
 
 Si l'envoi échoue (réseau coupé, API indisponible), le temps tracké **n'est jamais perdu** : il reste dans une file d'attente locale (visible dans le menu, "⚠ N envoi(s) en attente") et est retenté automatiquement au prochain rafraîchissement, ou manuellement en cliquant sur l'entrée.
+
+## Configuration (`~/.config/wrike-timer/config.json`)
+
+| Clé | Défaut | Description |
+|---|---|---|
+| `refresh_interval_seconds` | `30` | Fréquence de rafraîchissement (liste des tickets, total du jour, retry des envois en attente) |
+| `recent_tasks_limit` | `10` | Nombre de tickets affichés dans le menu |
+| `recent_tasks_lookback_days` | `30` | Fenêtre (en jours) sur laquelle chercher les tickets récents |
+| `timesheet_url` | `""` | URL de ta feuille de temps Wrike (copiée depuis la barre d'adresse du navigateur). Si non vide, ajoute "📊 Ouvrir ma feuille de temps" au menu, qui l'ouvre dans le navigateur par défaut. |
+
+Le total "📅 Aujourd'hui : Xh XX" en haut du menu additionne les `hours` de tous tes timelogs `trackedDate` = aujourd'hui, peu importe s'ils ont été créés par cette app ou directement sur wrike.com. Il ne compte pas le temps du chrono en cours (pas encore loggé tant qu'il n'est pas arrêté).
 
 ## Lancement automatique au démarrage
 

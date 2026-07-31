@@ -3,6 +3,8 @@
 import logging
 import threading
 import time
+import webbrowser
+from datetime import date
 
 import pystray
 from PIL import Image, ImageDraw
@@ -36,6 +38,7 @@ class TrayApp:
         self.active_timer = (
             timer.TimerState.from_dict(self.state["active_timer"]) if self.state.get("active_timer") else None
         )
+        self.today_total_hours = None
         self.lock = threading.RLock()
         self.stop_event = threading.Event()
         self.icon = pystray.Icon(
@@ -47,6 +50,7 @@ class TrayApp:
 
     def run(self):
         self._refresh_recent_tasks()
+        self._refresh_today_total()
         self._refresh_icon_and_menu()
         thread = threading.Thread(target=self._background_loop, daemon=True)
         thread.start()
@@ -75,6 +79,15 @@ class TrayApp:
         with self.lock:
             self.state["recent_tasks"] = ordered
             self.store.save(self.state)
+
+    def _refresh_today_total(self):
+        try:
+            total = self.client.get_hours_logged_on(date.today().isoformat())
+        except WrikeApiError:
+            log.exception("Failed to refresh today's total hours")
+            return
+        with self.lock:
+            self.today_total_hours = total
 
     def _post_or_queue(self, entry):
         try:
@@ -130,6 +143,7 @@ class TrayApp:
 
     def _on_refresh(self, icon, item):
         self._refresh_recent_tasks()
+        self._refresh_today_total()
         self._refresh_icon_and_menu()
 
     def _on_settings(self, icon, item):
@@ -139,12 +153,21 @@ class TrayApp:
         except Exception:
             log.info("Settings: %s", message.replace("\n", " | "))
 
+    def _on_open_timesheet(self, icon, item):
+        webbrowser.open(self.cfg["timesheet_url"])
+
     def _on_quit(self, icon, item):
         self.stop_event.set()
         icon.stop()
 
     def _build_menu(self):
         items = []
+
+        if self.today_total_hours is not None:
+            items.append(
+                pystray.MenuItem(f"📅 Aujourd'hui : {timer.format_hours(self.today_total_hours)}", None, enabled=False)
+            )
+            items.append(pystray.Menu.SEPARATOR)
 
         if self.active_timer:
             elapsed = timer.format_duration(timer.elapsed_seconds(self.active_timer))
@@ -166,6 +189,8 @@ class TrayApp:
             items.append(pystray.MenuItem(f"⚠ {len(pending)} envoi(s) en attente", self._on_retry_pending))
 
         items.append(pystray.MenuItem("🔄 Rafraîchir la liste", self._on_refresh))
+        if self.cfg.get("timesheet_url"):
+            items.append(pystray.MenuItem("📊 Ouvrir ma feuille de temps", self._on_open_timesheet))
         items.append(pystray.MenuItem("⚙️ Paramètres", self._on_settings))
         items.append(pystray.MenuItem("Quitter", self._on_quit))
         return pystray.Menu(*items)
@@ -184,6 +209,7 @@ class TrayApp:
 
             if now - last_refresh >= self.cfg["refresh_interval_seconds"]:
                 self._refresh_recent_tasks()
+                self._refresh_today_total()
                 if self.state.get("pending_timelogs"):
                     self._on_retry_pending(self.icon, None)
                 self._refresh_icon_and_menu()

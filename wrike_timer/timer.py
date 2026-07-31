@@ -2,7 +2,7 @@
 
 import time
 from dataclasses import asdict, dataclass
-from datetime import date, datetime
+from datetime import date
 
 
 @dataclass
@@ -50,3 +50,9 @@ def format_duration(seconds):
 
 def seconds_to_hours(seconds):
     return seconds / 3600
+
+
+def format_hours(total_hours):
+    total_minutes = round(total_hours * 60)
+    hours, minutes = divmod(total_minutes, 60)
+    return f"{hours}h{minutes:02d}"

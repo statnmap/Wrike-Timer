@@ -80,6 +80,17 @@ class WrikeClient:
         data = self._request("GET", f"/tasks/{','.join(task_ids)}")
         return [{"id": task["id"], "title": task["title"]} for task in data["data"]]
 
+    def get_hours_logged_on(self, tracked_date_iso):
+        # trackedDate is a date-only filter (unlike createdDate above, which is a
+        # full Instant), so no pageSize/time bound is needed: one day's worth of
+        # timelogs is always returned in a single response.
+        data = self._request(
+            "GET",
+            "/timelogs",
+            params={"me": "true", "trackedDate": json.dumps({"equal": tracked_date_iso})},
+        )
+        return sum(entry.get("hours", 0) for entry in data["data"])
+
     def post_timelog(self, task_id, hours, tracked_date, comment=""):
         # This endpoint takes its fields as query parameters, not a request body.
         self._request(

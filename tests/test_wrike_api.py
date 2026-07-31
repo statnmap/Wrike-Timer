@@ -96,6 +96,19 @@ def test_get_tasks_with_empty_list_skips_request():
     assert session.calls == []
 
 
+def test_get_hours_logged_on_sums_all_entries_for_that_date():
+    timelogs = {"data": [{"hours": 1.5}, {"hours": 0.5}, {"hours": 2.0}]}
+    client, session = make_client([FakeResponse(json_data=timelogs)])
+    assert client.get_hours_logged_on("2026-07-31") == 4.0
+    _, _, kwargs = session.calls[0]
+    assert kwargs["params"]["trackedDate"] == '{"equal": "2026-07-31"}'
+
+
+def test_get_hours_logged_on_with_no_entries_returns_zero():
+    client, _ = make_client([FakeResponse(json_data={"data": []})])
+    assert client.get_hours_logged_on("2026-07-31") == 0
+
+
 def test_post_timelog_sends_expected_payload():
     client, session = make_client([FakeResponse(json_data={"data": [{}]})])
     client.post_timelog("A", 1.5, "2026-07-31", "worked on it")
