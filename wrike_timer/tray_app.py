@@ -176,6 +176,16 @@ class TrayApp:
     def _on_open_timesheet(self, icon, item):
         webbrowser.open(self.cfg["timesheet_url"])
 
+    def _on_timesheet_url_missing(self, icon, item):
+        message = (
+            f'Ajoute "timesheet_url": "<ton url>" dans {config.CONFIG_PATH}\n'
+            "(copie l'URL depuis ton navigateur, sur ta page Timesheets Wrike)."
+        )
+        try:
+            icon.notify(message, "Wrike Timer — Feuille de temps")
+        except Exception:
+            log.info("Timesheet URL not configured: %s", message.replace("\n", " "))
+
     def _on_quit(self, icon, item):
         self.stop_event.set()
         icon.stop()
@@ -216,6 +226,8 @@ class TrayApp:
         items.append(pystray.MenuItem("🔄 Rafraîchir la liste", self._on_refresh))
         if self.cfg.get("timesheet_url"):
             items.append(pystray.MenuItem("📊 Ouvrir ma feuille de temps", self._on_open_timesheet))
+        else:
+            items.append(pystray.MenuItem("📊 Feuille de temps non configurée (clic = comment faire)", self._on_timesheet_url_missing))
         items.append(pystray.MenuItem("⚙️ Paramètres", self._on_settings))
         items.append(pystray.MenuItem("Quitter", self._on_quit))
         return pystray.Menu(*items)

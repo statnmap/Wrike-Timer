@@ -62,7 +62,7 @@ Si l'envoi échoue (réseau coupé, API indisponible), le temps tracké **n'est 
 | `refresh_interval_seconds` | `30` | Fréquence de rafraîchissement (liste des tickets, total du jour, retry des envois en attente) |
 | `recent_tasks_limit` | `10` | Nombre de tickets affichés dans le menu |
 | `recent_tasks_lookback_days` | `30` | Fenêtre (en jours) sur laquelle chercher les tickets récents |
-| `timesheet_url` | `""` | URL de ta feuille de temps Wrike (copiée depuis la barre d'adresse du navigateur). Si non vide, ajoute "📊 Ouvrir ma feuille de temps" au menu, qui l'ouvre dans le navigateur par défaut. |
+| `timesheet_url` | `""` | URL de ta feuille de temps Wrike (copiée depuis la barre d'adresse du navigateur, sur ta page Timesheets). Si non vide, le menu affiche "📊 Ouvrir ma feuille de temps" (ouvre l'URL dans le navigateur par défaut). Si vide, le menu affiche "📊 Feuille de temps non configurée (clic = comment faire)", qui rappelle où ajouter cette clé. |
 
 Le total "📅 Aujourd'hui : Xh XX" en haut du menu additionne les `hours` de tous tes timelogs `trackedDate` = aujourd'hui, peu importe s'ils ont été créés par cette app ou directement sur wrike.com. Il ne compte pas le temps du chrono en cours (pas encore loggé tant qu'il n'est pas arrêté).
 
