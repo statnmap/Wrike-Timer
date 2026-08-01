@@ -46,12 +46,10 @@ class TrayApp:
         self.today_total_hours = None
         self.resume_gap_seconds = None
         if self.active_timer:
-            last_heartbeat = self.state.get("last_heartbeat")
-            if last_heartbeat is not None:
-                gap = timer.gap_seconds(last_heartbeat, time.time())
-                if gap > HEARTBEAT_GAP_WARNING_SECONDS:
-                    self.resume_gap_seconds = gap
-                    log.warning("Resumed an active timer after a %.0fs gap (app wasn't running)", gap)
+            gap = timer.detect_resume_gap(self.state.get("last_heartbeat"), time.time(), HEARTBEAT_GAP_WARNING_SECONDS)
+            if gap is not None:
+                self.resume_gap_seconds = gap
+                log.warning("Resumed an active timer after a %.0fs gap (app wasn't running)", gap)
 
         self.lock = threading.RLock()
         self.stop_event = threading.Event()
@@ -240,8 +238,8 @@ class TrayApp:
                 if self.active_timer:
                     # A tick that took much longer than the ~1s wait means the
                     # machine was suspended while the app itself kept running.
-                    tick_gap = timer.gap_seconds(self._last_tick, now)
-                    if tick_gap > HEARTBEAT_GAP_WARNING_SECONDS and not self.resume_gap_seconds:
+                    tick_gap = timer.detect_resume_gap(self._last_tick, now, HEARTBEAT_GAP_WARNING_SECONDS)
+                    if tick_gap is not None and not self.resume_gap_seconds:
                         self.resume_gap_seconds = tick_gap
                         log.warning("Detected a %.0fs gap while a timer was active (system suspend?)", tick_gap)
 

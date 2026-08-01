@@ -71,3 +71,20 @@ def test_gap_seconds():
 
 def test_gap_seconds_never_negative():
     assert timer.gap_seconds(1000.0, 500.0) == 0
+
+
+def test_detect_resume_gap_none_when_no_heartbeat_ever_recorded():
+    # First run after upgrading from a state.json written before heartbeats existed.
+    assert timer.detect_resume_gap(None, 1000.0, threshold_seconds=300) is None
+
+
+def test_detect_resume_gap_none_when_heartbeat_is_recent():
+    assert timer.detect_resume_gap(1000.0, 1010.0, threshold_seconds=300) is None
+
+
+def test_detect_resume_gap_returns_gap_when_stale():
+    assert timer.detect_resume_gap(1000.0, 1000.0 + 301, threshold_seconds=300) == 301
+
+
+def test_detect_resume_gap_boundary_is_exclusive():
+    assert timer.detect_resume_gap(1000.0, 1300.0, threshold_seconds=300) is None

@@ -45,6 +45,19 @@ def gap_seconds(previous_timestamp, current_timestamp):
     return max(0.0, current_timestamp - previous_timestamp)
 
 
+def detect_resume_gap(last_heartbeat, now, threshold_seconds):
+    """Return the gap in seconds if it exceeds threshold_seconds, else None.
+
+    last_heartbeat=None means no heartbeat was ever recorded (e.g. first run
+    after upgrading from a state.json written before heartbeats existed) —
+    treated as "nothing to warn about" rather than an infinite gap.
+    """
+    if last_heartbeat is None:
+        return None
+    gap = gap_seconds(last_heartbeat, now)
+    return gap if gap > threshold_seconds else None
+
+
 def format_duration(seconds):
     total = int(seconds)
     hours, remainder = divmod(total, 3600)

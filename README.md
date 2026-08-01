@@ -92,6 +92,12 @@ Vérification périodique des CVE sur les dépendances :
 .venv/bin/pip-audit
 ```
 
+### CI (une fois poussé sur GitHub)
+
+`.github/workflows/ci.yml` fait tourner `pytest` sur Python 3.11 et 3.12 à chaque push/PR, plus un job `pip-audit` (non bloquant — juste un signal). Les tests ne dépendent d'aucune bibliothèque GTK/AppIndicator (la logique qui touche pystray est réduite au minimum et le reste est testé en pur Python), donc pas de setup particulier côté runner.
+
+`.github/dependabot.yml` ouvre automatiquement une PR chaque semaine si une dépendance (`requirements*.txt` ou les actions GitHub elles-mêmes) a une nouvelle version — la CI tourne dessus automatiquement, donc une mise à jour qui casse quelque chose se voit avant de merger. C'est la réponse à "comment on pense à mettre à jour" : Dependabot pense à ta place, tu n'as qu'à relire/merger les PR qu'il ouvre.
+
 ## Limitations connues
 
 - **Pas de notion de "favoris".** L'API Wrike v4 n'expose ni champ, ni endpoint pour les tickets étoilés ("Starred tasks" est un smart folder purement côté UI Wrike, invisible depuis l'API) — impossible de les lire depuis cette app. La liste se limite aux tickets récents.
