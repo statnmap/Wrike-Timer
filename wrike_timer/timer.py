@@ -73,3 +73,7 @@ def format_hours(total_hours):
     total_minutes = round(total_hours * 60)
     hours, minutes = divmod(total_minutes, 60)
     return f"{hours}h{minutes:02d}"
+
+
+def task_label(title, status):
+    return f"❌ {title}" if status == "Completed" else title

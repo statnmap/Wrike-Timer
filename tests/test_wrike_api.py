@@ -80,13 +80,22 @@ def test_get_recent_task_ids_does_not_send_unsupported_sort_params():
     assert "createdDate" in kwargs["params"]
 
 
-def test_get_tasks_returns_id_and_title():
+def test_get_tasks_returns_id_title_and_status():
     client, _ = make_client(
-        [FakeResponse(json_data={"data": [{"id": "A", "title": "Fix bug"}, {"id": "B", "title": "Write docs"}]})]
+        [
+            FakeResponse(
+                json_data={
+                    "data": [
+                        {"id": "A", "title": "Fix bug", "status": "Active"},
+                        {"id": "B", "title": "Write docs", "status": "Completed"},
+                    ]
+                }
+            )
+        ]
     )
     assert client.get_tasks(["A", "B"]) == [
-        {"id": "A", "title": "Fix bug"},
-        {"id": "B", "title": "Write docs"},
+        {"id": "A", "title": "Fix bug", "status": "Active"},
+        {"id": "B", "title": "Write docs", "status": "Completed"},
     ]
 
 

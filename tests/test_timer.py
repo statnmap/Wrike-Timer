@@ -88,3 +88,12 @@ def test_detect_resume_gap_returns_gap_when_stale():
 
 def test_detect_resume_gap_boundary_is_exclusive():
     assert timer.detect_resume_gap(1000.0, 1300.0, threshold_seconds=300) is None
+
+
+def test_task_label_marks_completed_tasks():
+    assert timer.task_label("Fix bug", "Completed") == "❌ Fix bug"
+
+
+def test_task_label_leaves_other_statuses_untouched():
+    assert timer.task_label("Fix bug", "Active") == "Fix bug"
+    assert timer.task_label("Fix bug", None) == "Fix bug"

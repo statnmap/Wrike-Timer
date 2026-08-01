@@ -78,7 +78,7 @@ class WrikeClient:
         if not task_ids:
             return []
         data = self._request("GET", f"/tasks/{','.join(task_ids)}")
-        return [{"id": task["id"], "title": task["title"]} for task in data["data"]]
+        return [{"id": task["id"], "title": task["title"], "status": task.get("status")} for task in data["data"]]
 
     def get_hours_logged_on(self, tracked_date_iso):
         # trackedDate is a date-only filter (unlike createdDate above, which is a

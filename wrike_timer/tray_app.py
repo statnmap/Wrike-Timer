@@ -210,8 +210,9 @@ class TrayApp:
         recent = self.state.get("recent_tasks", [])
         if recent:
             for task in recent:
+                label = timer.task_label(task["title"], task.get("status"))
                 items.append(
-                    pystray.MenuItem(task["title"], self._make_start_handler(task), enabled=self.active_timer is None)
+                    pystray.MenuItem(label, self._make_start_handler(task), enabled=self.active_timer is None)
                 )
         else:
             items.append(pystray.MenuItem("(aucun ticket récent — Rafraîchir)", None, enabled=False))
