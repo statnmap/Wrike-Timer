@@ -117,31 +117,41 @@ class TrayApp:
 
     def _make_start_handler(self, task):
         def handler(icon, item):
-            with self.lock:
-                if self.active_timer is not None:
-                    return
-                self.active_timer = timer.start(task["id"], task["title"])
-                self._persist_active_timer()
-            self._refresh_icon_and_menu()
+            self._switch_to_task(task)
 
         return handler
+
+    def _stop_active_timer_locked(self):
+        """Stop the active timer and submit/queue its timelog. Must be called with self.lock held."""
+        if self.active_timer is None:
+            return
+        active = self.active_timer
+        duration_seconds, tracked_date = timer.stop(active)
+        self.active_timer = None
+        self.resume_gap_seconds = None
+        self._persist_active_timer()
+        entry = {
+            "task_id": active.task_id,
+            "hours": round(timer.seconds_to_hours(duration_seconds), 4),
+            "tracked_date": tracked_date,
+            "comment": "",
+        }
+        self._post_or_queue(entry)
+
+    def _switch_to_task(self, task):
+        with self.lock:
+            if self.active_timer is not None and self.active_timer.task_id == task["id"]:
+                return
+            self._stop_active_timer_locked()
+            self.active_timer = timer.start(task["id"], task["title"])
+            self._persist_active_timer()
+        self._refresh_icon_and_menu()
 
     def _on_stop(self, icon, item):
         with self.lock:
             if self.active_timer is None:
                 return
-            active = self.active_timer
-            duration_seconds, tracked_date = timer.stop(active)
-            self.active_timer = None
-            self.resume_gap_seconds = None
-            self._persist_active_timer()
-            entry = {
-                "task_id": active.task_id,
-                "hours": round(timer.seconds_to_hours(duration_seconds), 4),
-                "tracked_date": tracked_date,
-                "comment": "",
-            }
-            self._post_or_queue(entry)
+            self._stop_active_timer_locked()
         self._refresh_icon_and_menu()
 
     def _on_retry_pending(self, icon, item):
@@ -208,12 +218,12 @@ class TrayApp:
             items.append(pystray.Menu.SEPARATOR)
 
         recent = self.state.get("recent_tasks", [])
+        if self.active_timer:
+            recent = [t for t in recent if t["id"] != self.active_timer.task_id]
         if recent:
             for task in recent:
                 label = timer.task_label(task["title"], task.get("status"))
-                items.append(
-                    pystray.MenuItem(label, self._make_start_handler(task), enabled=self.active_timer is None)
-                )
+                items.append(pystray.MenuItem(label, self._make_start_handler(task)))
         else:
             items.append(pystray.MenuItem("(aucun ticket récent — Rafraîchir)", None, enabled=False))
         items.append(pystray.Menu.SEPARATOR)
