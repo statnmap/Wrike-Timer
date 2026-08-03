@@ -108,3 +108,14 @@ Vérification périodique des CVE sur les dépendances :
 
 - `.gitignore` exclut `config.json`, `state.json` et les logs dès le premier commit — ne pas les forcer avec `git add -f`.
 - Voir [AGENTS.md](AGENTS.md) pour les règles complètes sur les données sensibles à ne jamais partager.
+
+### Git hook de vérification
+
+Un hook `pre-commit` (`.githooks/pre-commit`) vérifie que `config.example.json` ne contient jamais de vraies données (URL de feuille de temps réelle, token, etc.) au lieu de simples placeholders.
+
+⚠️ Git ne l'active pas automatiquement au clonage — à faire une fois après `git clone` :
+```bash
+git config core.hooksPath .githooks
+```
+
+C'est un contrôle **local uniquement** : la CI (voir ci-dessous) ne fait pas ce scan.

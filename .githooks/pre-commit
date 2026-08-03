@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+"""Pre-commit hook: refuse un commit qui met de vraies données dans config.example.json."""
+import json
+import re
+import subprocess
+import sys
+
+EXAMPLE_FILE = "config.example.json"
+KNOWN_KEYS = {
+    "refresh_interval_seconds",
+    "recent_tasks_limit",
+    "recent_tasks_lookback_days",
+    "timesheet_url",
+}
+SUSPICIOUS_VALUE_RE = re.compile(r"wrike\.com|[A-Za-z0-9_-]{30,}")
+
+
+def staged_content():
+    result = subprocess.run(
+        ["git", "show", f":{EXAMPLE_FILE}"],
+        capture_output=True, text=True,
+    )
+    return result.stdout if result.returncode == 0 else None
+
+
+def main():
+    raw = staged_content()
+    if raw is None:
+        return 0
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        print(f"⚠️  {EXAMPLE_FILE} n'est pas un JSON valide dans l'index : {exc}")
+        return 1
+
+    problems = []
+
+    unknown_keys = set(data) - KNOWN_KEYS
+    if unknown_keys:
+        problems.append(
+            f"clé(s) inattendue(s) {sorted(unknown_keys)} — {EXAMPLE_FILE} ne doit "
+            "contenir que des placeholders, jamais un token ou une donnée réelle."
+        )
+
+    timesheet_url = data.get("timesheet_url", "")
+    if timesheet_url:
+        problems.append(
+            f"'timesheet_url' n'est pas vide ({timesheet_url!r}) — le placeholder "
+            'attendu est "".'
+        )
+
+    for key, value in data.items():
+        if isinstance(value, str) and value and SUSPICIOUS_VALUE_RE.search(value):
+            problems.append(
+                f"la valeur de '{key}' ressemble à une vraie donnée Wrike/un token : {value!r}"
+            )
+
+    if not problems:
+        return 0
+
+    print(f"❌ Commit bloqué : {EXAMPLE_FILE} semble contenir de vraies données confidentielles.")
+    for problem in problems:
+        print(f"   - {problem}")
+    print(
+        f"\nLes vraies valeurs vont dans ~/.config/wrike-timer/config.json (gitignoré), "
+        f"jamais dans {EXAMPLE_FILE}."
+    )
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

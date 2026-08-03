@@ -6,6 +6,7 @@
 - Ne jamais committer `config.json`, `state.json`, ou `*.log` : ils peuvent contenir des titres de tâches, des IDs Wrike, ou des données de temps qui appartiennent à l'organisation Wrike de l'utilisateur, pas au repo.
 - Les logs ne contiennent que ce qui est nécessaire au debug (task ID, durée, code HTTP) — jamais le corps complet d'une réponse API, une description de tâche, ni le token.
 - Pour du debug avec de vraies données API, ne pas coller de réponse brute contenant des données réelles dans un fichier versionné ou un message partagé ; utiliser des données factices dans les tests.
+- `config.example.json` ne doit contenir que des valeurs placeholder, jamais une vraie URL/token — un hook pre-commit local le vérifie (voir README, section Sécurité).
 
 ## Règles agents (toujours)
 
