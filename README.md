@@ -66,6 +66,8 @@ Si l'envoi échoue (réseau coupé, API indisponible), le temps tracké **n'est 
 
 ⚠️ Ne pas confondre avec `~/.local/share/wrike-timer/state.json` : ce second fichier est un **cache interne** (tickets récents, chrono actif, file de retry, heartbeat), entièrement réécrit par l'app à chaque cycle de rafraîchissement. Toute clé ajoutée à la main dedans est ignorée et finit par disparaître au prochain rafraîchissement — les réglages se mettent dans `config.json`, jamais dans `state.json`.
 
+La liste des "tickets récents" est construite à partir de tes derniers timelogs (`trackedDate`/`createdDate` dans la fenêtre `recent_tasks_lookback_days`), pas à partir de l'assignation ou de la date d'échéance. Un ticket qui t'est assigné mais sur lequel tu n'as jamais loggé de temps n'apparaîtra donc jamais tout seul dans le menu. Pour le faire remonter, il suffit d'y ajouter une entrée de temps d'au moins 1 minute (directement sur wrike.com, par exemple) — il apparaîtra ensuite dans la liste au prochain rafraîchissement.
+
 Le total "📅 Aujourd'hui : Xh XX" en haut du menu additionne les `hours` de tous tes timelogs `trackedDate` = aujourd'hui, peu importe s'ils ont été créés par cette app ou directement sur wrike.com. Il ne compte pas le temps du chrono en cours (pas encore loggé tant qu'il n'est pas arrêté).
 
 ## Lancement automatique au démarrage
