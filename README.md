@@ -107,7 +107,7 @@ Shows the icon with an active timer and a list of fake tasks (no token or real d
 
 ### CI (once pushed to GitHub)
 
-`.github/workflows/ci.yml` runs `pytest` on Python 3.11 and 3.12 on every push/PR, plus a `pip-audit` job (non-blocking — just a signal). The tests don't depend on any GTK/AppIndicator library (the logic touching pystray is kept to a minimum and the rest is tested in pure Python), so no special runner setup is needed.
+`.github/workflows/ci.yml` runs `pytest` on Python 3.11 and 3.12 on every push/PR, plus a `pip-audit` job (non-blocking — just a signal). The tests don't depend on any GTK/AppIndicator library (the logic touching pystray is kept to a minimum and the rest is tested in pure Python), but merely importing `pystray` still requires a display to connect to on Linux — the runner has no GTK bindings installed, so it falls back to the plain Xorg backend, which opens a real X connection at import time. CI runs tests under `xvfb-run` (a virtual framebuffer X server) to satisfy that, without needing any GTK/AppIndicator package.
 
 `.github/dependabot.yml` automatically opens a PR every week if a dependency (`requirements*.txt` or the GitHub Actions themselves) has a new version — CI runs on it automatically, so an update that breaks something is visible before merging. That's the answer to "how do we remember to update": Dependabot remembers for you, you just review/merge the PRs it opens.
 
