@@ -24,10 +24,10 @@ class FakeClient:
         self.posted.append({"task_id": task_id, "hours": hours, "tracked_date": tracked_date, "comment": comment})
 
 
-def make_app(tmp_path, monkeypatch, recent_tasks=None):
+def make_app(tmp_path, monkeypatch, recent_tasks=None, cfg=None):
     monkeypatch.setattr(tray_app_module, "WrikeClient", FakeClient)
     monkeypatch.setattr(tray_app_module.config, "STATE_PATH", tmp_path / "state.json")
-    app = TrayApp("token", CFG)
+    app = TrayApp("token", cfg or CFG)
     app.state["recent_tasks"] = recent_tasks or []
     return app
 
@@ -88,3 +88,21 @@ def test_build_menu_excludes_active_task_and_enables_others(tmp_path, monkeypatc
 
     b_item = next(item for item in menu_items if getattr(item, "text", None) == "Task B")
     assert b_item.enabled
+
+
+def test_build_menu_defaults_to_english(tmp_path, monkeypatch):
+    app = make_app(tmp_path, monkeypatch)
+
+    labels = [item.text for item in app._build_menu()]
+
+    assert "Quit" in labels
+    assert "Quitter" not in labels
+
+
+def test_build_menu_respects_language_config(tmp_path, monkeypatch):
+    app = make_app(tmp_path, monkeypatch, cfg={**CFG, "language": "fr"})
+
+    labels = [item.text for item in app._build_menu()]
+
+    assert "Quitter" in labels
+    assert "Quit" not in labels

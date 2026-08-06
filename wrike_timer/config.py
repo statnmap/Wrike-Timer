@@ -24,6 +24,7 @@ DEFAULT_CONFIG = {
     "recent_tasks_limit": 10,
     "recent_tasks_lookback_days": 30,
     "timesheet_url": "",
+    "language": "en",
 }
 
 log = logging.getLogger(__name__)

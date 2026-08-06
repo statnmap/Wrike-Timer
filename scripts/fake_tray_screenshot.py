@@ -30,6 +30,7 @@ FAKE_CFG = {
     "recent_tasks_lookback_days": 30,
     "refresh_interval_seconds": 3600,
     "timesheet_url": "",
+    "language": "en",
 }
 
 FAKE_RECENT_TASKS = [
@@ -62,7 +63,7 @@ def main():
     app._refresh_icon_and_menu()
 
     print("Tray icon shown with fake data. Click the icon to open the menu.")
-    print("Ctrl+C or the 'Quitter' entry in the menu to stop (menu is still French for now).")
+    print("Ctrl+C or the 'Quit' entry in the menu to stop.")
     app.icon.run()
 
 

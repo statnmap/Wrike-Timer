@@ -95,7 +95,7 @@ def main():
     cfg = config.load_config()
     if not token:
         logging.getLogger(__name__).warning("No token configured, starting in unconfigured mode")
-        tray_app.run_unconfigured()
+        tray_app.run_unconfigured(cfg)
         return 0
 
     tray_app.run(cfg, token)

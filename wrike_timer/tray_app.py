@@ -9,7 +9,7 @@ from datetime import date
 import pystray
 from PIL import Image, ImageDraw
 
-from . import config, timer
+from . import config, i18n, timer
 from .state_store import StateStore
 from .wrike_api import WrikeApiError, WrikeClient
 
@@ -37,6 +37,7 @@ def _make_icon(color):
 class TrayApp:
     def __init__(self, token, cfg):
         self.cfg = cfg
+        i18n.set_language(cfg.get("language", "en"))
         self.client = WrikeClient(token)
         self.store = StateStore(config.STATE_PATH)
         self.state = self.store.load()
@@ -177,7 +178,7 @@ class TrayApp:
     def _on_settings(self, icon, item):
         message = f"Config: {config.CONFIG_PATH}\nLogs: {config.LOG_PATH}"
         try:
-            icon.notify(message, "Wrike Timer — Paramètres")
+            icon.notify(message, i18n.t("settings_notification_title"))
         except Exception:
             log.info("Settings: %s", message.replace("\n", " | "))
 
@@ -185,12 +186,9 @@ class TrayApp:
         webbrowser.open(self.cfg["timesheet_url"])
 
     def _on_timesheet_url_missing(self, icon, item):
-        message = (
-            f'Ajoute "timesheet_url": "<ton url>" dans {config.CONFIG_PATH}\n'
-            "(copie l'URL depuis ton navigateur, sur ta page Timesheets Wrike)."
-        )
+        message = i18n.t("timesheet_missing_notification_body", config_path=config.CONFIG_PATH)
         try:
-            icon.notify(message, "Wrike Timer — Feuille de temps")
+            icon.notify(message, i18n.t("timesheet_missing_notification_title"))
         except Exception:
             log.info("Timesheet URL not configured: %s", message.replace("\n", " "))
 
@@ -202,9 +200,8 @@ class TrayApp:
         items = []
 
         if self.today_total_hours is not None:
-            items.append(
-                pystray.MenuItem(f"📅 Aujourd'hui : {timer.format_hours(self.today_total_hours)}", None, enabled=False)
-            )
+            hours_label = timer.format_hours(self.today_total_hours)
+            items.append(pystray.MenuItem(i18n.t("today_total", hours=hours_label), None, enabled=False))
             items.append(pystray.Menu.SEPARATOR)
 
         if self.active_timer:
@@ -212,9 +209,7 @@ class TrayApp:
             items.append(pystray.MenuItem(f"🔴 {self.active_timer.task_title} — {elapsed}", self._on_stop))
             if self.resume_gap_seconds:
                 gap_label = timer.format_hours(self.resume_gap_seconds / 3600)
-                items.append(
-                    pystray.MenuItem(f"⚠️ Reprise après ~{gap_label} d'interruption détectée", None, enabled=False)
-                )
+                items.append(pystray.MenuItem(i18n.t("resume_gap", gap=gap_label), None, enabled=False))
             items.append(pystray.Menu.SEPARATOR)
 
         recent = self.state.get("recent_tasks", [])
@@ -225,20 +220,20 @@ class TrayApp:
                 label = timer.task_label(task["title"], task.get("status"))
                 items.append(pystray.MenuItem(label, self._make_start_handler(task)))
         else:
-            items.append(pystray.MenuItem("(aucun ticket récent — Rafraîchir)", None, enabled=False))
+            items.append(pystray.MenuItem(i18n.t("no_recent_tasks"), None, enabled=False))
         items.append(pystray.Menu.SEPARATOR)
 
         pending = self.state.get("pending_timelogs", [])
         if pending:
-            items.append(pystray.MenuItem(f"⚠ {len(pending)} envoi(s) en attente", self._on_retry_pending))
+            items.append(pystray.MenuItem(i18n.t("pending_timelogs", count=len(pending)), self._on_retry_pending))
 
-        items.append(pystray.MenuItem("🔄 Rafraîchir la liste", self._on_refresh))
+        items.append(pystray.MenuItem(i18n.t("refresh_list"), self._on_refresh))
         if self.cfg.get("timesheet_url"):
-            items.append(pystray.MenuItem("📊 Ouvrir ma feuille de temps", self._on_open_timesheet))
+            items.append(pystray.MenuItem(i18n.t("open_timesheet"), self._on_open_timesheet))
         else:
-            items.append(pystray.MenuItem("📊 Feuille de temps non configurée (clic = comment faire)", self._on_timesheet_url_missing))
-        items.append(pystray.MenuItem("⚙️ Paramètres", self._on_settings))
-        items.append(pystray.MenuItem("Quitter", self._on_quit))
+            items.append(pystray.MenuItem(i18n.t("timesheet_not_configured"), self._on_timesheet_url_missing))
+        items.append(pystray.MenuItem(i18n.t("settings"), self._on_settings))
+        items.append(pystray.MenuItem(i18n.t("quit"), self._on_quit))
         return pystray.Menu(*items)
 
     def _background_loop(self):
@@ -277,13 +272,15 @@ def run(cfg, token):
     TrayApp(token, cfg).run()
 
 
-def run_unconfigured():
+def run_unconfigured(cfg):
+    i18n.set_language(cfg.get("language", "en"))
+
     def on_quit(icon, item):
         icon.stop()
 
     menu = pystray.Menu(
-        pystray.MenuItem("⚠ Configuration requise — lancer : wrike_timer.py --set-token", None, enabled=False),
-        pystray.MenuItem("Quitter", on_quit),
+        pystray.MenuItem(i18n.t("unconfigured_menu_item"), None, enabled=False),
+        pystray.MenuItem(i18n.t("quit"), on_quit),
     )
-    icon = pystray.Icon("wrike-timer", _make_icon(COLOR_UNCONFIGURED), "Wrike Timer — non configuré", menu)
+    icon = pystray.Icon("wrike-timer", _make_icon(COLOR_UNCONFIGURED), i18n.t("unconfigured_icon_title"), menu)
     icon.run()

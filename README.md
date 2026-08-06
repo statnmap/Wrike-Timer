@@ -65,6 +65,7 @@ If the submission fails (network down, API unavailable), tracked time is **never
 | `recent_tasks_limit` | `10` | Number of tasks shown in the menu |
 | `recent_tasks_lookback_days` | `30` | Window (in days) to look back for recent tasks |
 | `timesheet_url` | `""` | URL of your Wrike timesheet (copied from the browser's address bar, on your Timesheets page). If non-empty, the menu shows "📊 Open my timesheet" (opens the URL in the default browser). If empty, the menu shows "📊 Timesheet not configured (click for instructions)", which reminds you where to add this key. |
+| `language` | `"en"` | Language of the tray menu and notifications: `"en"` or `"fr"`. Falls back to `"en"` for any other value. Doesn't affect the CLI (`--set-token`, `--help`, etc.), which is English-only. |
 
 ⚠️ Don't confuse this with `~/.local/share/wrike-timer/state.json`: this second file is an **internal cache** (recent tasks, active timer, retry queue, heartbeat), entirely rewritten by the app on every refresh cycle. Any key added by hand in there is ignored and eventually disappears on the next refresh — settings go in `config.json`, never in `state.json`.
 
