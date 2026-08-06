@@ -3,6 +3,7 @@
 
 Usage:
     .venv/bin/python scripts/fake_tray_screenshot.py
+    .venv/bin/python scripts/fake_tray_screenshot.py --smoke-test  # build the icon/menu, then exit (used by CI)
 
 Uses no real token and none of the machine's real state.json/config.json:
 the Wrike client is a stub and the state is redirected to a temp file.
@@ -61,6 +62,10 @@ def main():
     )
     app.today_total_hours = 3.5
     app._refresh_icon_and_menu()
+
+    if "--smoke-test" in sys.argv:
+        print("Smoke test OK: tray icon and menu built without error.")
+        return
 
     print("Tray icon shown with fake data. Click the icon to open the menu.")
     print("Ctrl+C or the 'Quit' entry in the menu to stop.")
