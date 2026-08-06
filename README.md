@@ -1,133 +1,133 @@
 # Wrike Timer
 
-Chrono de suivi de temps dans le tray système, qui parle uniquement à l'API Wrike — aucun service tiers, aucune donnée partagée avec Toggl/Clockify/etc.
+System tray time tracker that talks only to the Wrike API — no third-party service, no data shared with Toggl/Clockify/etc.
 
-Le menu liste les 10 derniers tickets sur lesquels tu as loggé du temps ; un clic démarre le chrono, un clic sur l'entrée active l'arrête et pousse le temps vers Wrike. Il affiche aussi le total d'heures loggées aujourd'hui (tous tickets confondus, que ça vienne de l'app ou directement du site Wrike), et peut proposer un lien direct vers ta feuille de temps.
+The menu lists the 10 tasks you last logged time on; clicking one starts the timer, and clicking the active entry stops it and pushes the time to Wrike. It also shows the total hours logged today (across all tasks, whether logged by the app or directly on the Wrike site), and can offer a direct link to your timesheet.
 
-![Menu du tray Wrike Timer](docs/tray-menu.png)
+![Wrike Timer tray menu](docs/tray-menu.png)
 
-## Prérequis
+## Requirements
 
 - Python 3.9+
-- **Linux + GNOME** : le tray système nécessite le support AppIndicator/StatusNotifierItem. Sur **Ubuntu**, l'extension `ubuntu-appindicators` est présente mais **pas forcément activée** — vérifie avec :
+- **Linux + GNOME**: the system tray needs AppIndicator/StatusNotifierItem support. On **Ubuntu**, the `ubuntu-appindicators` extension is present but **not necessarily enabled** — check with:
   ```bash
-  gnome-extensions info ubuntu-appindicators@ubuntu.com   # "Activé: Oui" / "État: ACTIVE" attendus
+  gnome-extensions info ubuntu-appindicators@ubuntu.com   # expects "Enabled: Yes" / "State: ACTIVE"
   ```
-  Si besoin : `gnome-extensions enable ubuntu-appindicators@ubuntu.com`. ⚠️ Sous **Wayland**, une extension qu'on vient d'activer reste à l'état `INACTIVE` tant que la session GNOME Shell n'est pas relancée — il faut se **déconnecter/reconnecter** (ou redémarrer) pour qu'elle prenne effet, un simple `Alt+F2, r` ne fonctionne qu'en session X11.
-  Sur un **autre GNOME** (Fedora, Debian vanilla, etc.) sans cette extension préinstallée :
+  If needed: `gnome-extensions enable ubuntu-appindicators@ubuntu.com`. ⚠️ Under **Wayland**, an extension you just enabled stays `INACTIVE` until the GNOME Shell session is restarted — you need to **log out/back in** (or reboot) for it to take effect; a simple `Alt+F2, r` only works in an X11 session.
+  On **other GNOME** distros (Fedora, vanilla Debian, etc.) without this extension preinstalled:
   ```bash
-  sudo apt install gnome-shell-extension-appindicator   # ou l'équivalent de ta distro
+  sudo apt install gnome-shell-extension-appindicator   # or your distro's equivalent
   ```
-  puis active-la via l'app "Extensions" ou https://extensions.gnome.org (même contrainte de reconnexion sous Wayland).
-- KDE, XFCE, Cinnamon, MATE : support natif, rien à installer.
-- macOS / Windows : `pystray` bascule automatiquement sur le bon backend — non testé par ce projet (développé/vérifié sur Ubuntu GNOME) mais devrait fonctionner tel quel.
-- **Terminal intégré VS Code (paquet snap)** : si tu lances l'app depuis ce terminal, `symbol lookup error: ... libpthread.so.0` peut apparaître — le snap injecte des variables GTK/GIO qui pointent vers ses propres bibliothèques, incompatibles avec le GTK système. `wrike_timer.py` neutralise automatiquement ces variables au lancement (uniquement celles qui pointent vers `/snap/`, donc sans effet dans un terminal normal) ; si le souci persiste, lance l'app depuis un terminal système classique.
+  then enable it via the "Extensions" app or https://extensions.gnome.org (same reconnect requirement under Wayland).
+- KDE, XFCE, Cinnamon, MATE: native support, nothing to install.
+- macOS / Windows: `pystray` automatically switches to the right backend — untested by this project (developed/verified on Ubuntu GNOME) but should work as-is.
+- **VS Code integrated terminal (snap package)**: if you launch the app from this terminal, `symbol lookup error: ... libpthread.so.0` may show up — the snap injects GTK/GIO env vars that point at its own bundled libraries, incompatible with the system's GTK. `wrike_timer.py` automatically neutralizes these variables at startup (only the ones pointing at `/snap/`, so it has no effect in a regular terminal); if the issue persists, launch the app from a regular system terminal.
 
 ## Installation
 
 ```bash
-git clone <url-du-repo> wrike-timer
+git clone <repo-url> wrike-timer
 cd wrike-timer
 python3 -m venv --system-site-packages .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-⚠️ **Le `--system-site-packages` est obligatoire sur Linux.** Sans lui, `pystray` ne trouve pas les bindings GTK/AppIndicator du système, retombe sur un backend qui ne fonctionne pas sous GNOME, et l'app se lance sans erreur mais **aucune icône n'apparaît** dans le tray.
+⚠️ **`--system-site-packages` is required on Linux.** Without it, `pystray` can't find the system's GTK/AppIndicator bindings, falls back to a backend that doesn't work under GNOME, and the app starts with no error but **no icon appears** in the tray.
 
-## Configuration du token
+## Setting up the token
 
-1. Sur Wrike : **Paramètres → Apps & Integrations → API → générer un Permanent Access Token** (usage perso, pas besoin d'app OAuth).
-2. Puis :
+1. On Wrike: **Settings → Apps & Integrations → API → generate a Permanent Access Token** (personal use, no OAuth app needed).
+2. Then:
    ```bash
    .venv/bin/python wrike_timer.py --set-token
    ```
-   Le token est saisi de façon masquée et stocké dans le trousseau système (gnome-keyring ou équivalent). Si aucun trousseau n'est disponible sur la machine, il est stocké en fallback dans `~/.config/wrike-timer/config.json` (créé avec les permissions `600`).
+   The token is entered with masked input and stored in the system keyring (gnome-keyring or equivalent). If no keyring backend is available on the machine, it's stored as a fallback in `~/.config/wrike-timer/config.json` (created with `600` permissions).
 
-   ⚠️ Cette commande a besoin d'un vrai terminal interactif. Si tu la lances depuis un contexte non-interactif (script, passthrough), la saisie masquée échoue avec `EOFError` — utilise plutôt `--set-token --token <valeur>` (le token apparaît alors en clair dans l'historique du shell, donc uniquement pour du scripting ponctuel).
+   ⚠️ This command needs a real interactive terminal. If you run it from a non-interactive context (script, passthrough), masked input fails with `EOFError` — use `--set-token --token <value>` instead (the token then appears in plain text in shell history, so only for one-off scripting).
 
-**Ne partage et ne committe jamais ton token.** Chaque personne qui utilise ce repo génère le sien.
+**Never share or commit your token.** Everyone using this repo generates their own.
 
-## Lancer l'app
+## Running the app
 
 ```bash
 .venv/bin/python wrike_timer.py
 ```
 
-L'icône apparaît dans le tray. Le menu liste les 10 derniers tickets loggés ; un clic démarre le chrono, l'entrée "🔴 ..." en haut du menu permet de l'arrêter et pousse automatiquement le temps sur Wrike.
+The icon appears in the tray. The menu lists the 10 most recently logged tasks; clicking one starts the timer, and the "🔴 ..." entry at the top of the menu stops it and automatically pushes the time to Wrike.
 
-Si l'envoi échoue (réseau coupé, API indisponible), le temps tracké **n'est jamais perdu** : il reste dans une file d'attente locale (visible dans le menu, "⚠ N envoi(s) en attente") et est retenté automatiquement au prochain rafraîchissement, ou manuellement en cliquant sur l'entrée.
+If the submission fails (network down, API unavailable), tracked time is **never lost**: it stays in a local retry queue (visible in the menu as "⚠ N pending submission(s)") and is automatically retried on the next refresh, or manually by clicking the entry.
 
 ## Configuration (`~/.config/wrike-timer/config.json`)
 
-| Clé | Défaut | Description |
+| Key | Default | Description |
 |---|---|---|
-| `refresh_interval_seconds` | `30` | Fréquence de rafraîchissement (liste des tickets, total du jour, retry des envois en attente) |
-| `recent_tasks_limit` | `10` | Nombre de tickets affichés dans le menu |
-| `recent_tasks_lookback_days` | `30` | Fenêtre (en jours) sur laquelle chercher les tickets récents |
-| `timesheet_url` | `""` | URL de ta feuille de temps Wrike (copiée depuis la barre d'adresse du navigateur, sur ta page Timesheets). Si non vide, le menu affiche "📊 Ouvrir ma feuille de temps" (ouvre l'URL dans le navigateur par défaut). Si vide, le menu affiche "📊 Feuille de temps non configurée (clic = comment faire)", qui rappelle où ajouter cette clé. |
+| `refresh_interval_seconds` | `30` | Refresh frequency (task list, today's total, retry of pending submissions) |
+| `recent_tasks_limit` | `10` | Number of tasks shown in the menu |
+| `recent_tasks_lookback_days` | `30` | Window (in days) to look back for recent tasks |
+| `timesheet_url` | `""` | URL of your Wrike timesheet (copied from the browser's address bar, on your Timesheets page). If non-empty, the menu shows "📊 Open my timesheet" (opens the URL in the default browser). If empty, the menu shows "📊 Timesheet not configured (click for instructions)", which reminds you where to add this key. |
 
-⚠️ Ne pas confondre avec `~/.local/share/wrike-timer/state.json` : ce second fichier est un **cache interne** (tickets récents, chrono actif, file de retry, heartbeat), entièrement réécrit par l'app à chaque cycle de rafraîchissement. Toute clé ajoutée à la main dedans est ignorée et finit par disparaître au prochain rafraîchissement — les réglages se mettent dans `config.json`, jamais dans `state.json`.
+⚠️ Don't confuse this with `~/.local/share/wrike-timer/state.json`: this second file is an **internal cache** (recent tasks, active timer, retry queue, heartbeat), entirely rewritten by the app on every refresh cycle. Any key added by hand in there is ignored and eventually disappears on the next refresh — settings go in `config.json`, never in `state.json`.
 
-La liste des "tickets récents" est construite à partir de tes derniers timelogs (`trackedDate`/`createdDate` dans la fenêtre `recent_tasks_lookback_days`), pas à partir de l'assignation ou de la date d'échéance. Un ticket qui t'est assigné mais sur lequel tu n'as jamais loggé de temps n'apparaîtra donc jamais tout seul dans le menu. Pour le faire remonter, il suffit d'y ajouter une entrée de temps d'au moins 1 minute (directement sur wrike.com, par exemple) — il apparaîtra ensuite dans la liste au prochain rafraîchissement.
+The "recent tasks" list is built from your latest timelogs (`trackedDate`/`createdDate` within the `recent_tasks_lookback_days` window), not from assignment or due date. A task assigned to you but on which you've never logged time will therefore never show up in the menu on its own. To make it appear, just add a time entry of at least 1 minute to it (directly on wrike.com, for instance) — it will then show up in the list on the next refresh.
 
-Le total "📅 Aujourd'hui : Xh XX" en haut du menu additionne les `hours` de tous tes timelogs `trackedDate` = aujourd'hui, peu importe s'ils ont été créés par cette app ou directement sur wrike.com. Il ne compte pas le temps du chrono en cours (pas encore loggé tant qu'il n'est pas arrêté).
+The "📅 Today: Xh XX" total at the top of the menu adds up the `hours` of all your timelogs with `trackedDate` = today, whether they were created by this app or directly on wrike.com. It does not count the time of the currently running timer (not logged yet until it's stopped).
 
-## Lancement automatique au démarrage
+## Launching automatically at startup
 
 ```bash
-.venv/bin/python wrike_timer.py --install-autostart    # active
-.venv/bin/python wrike_timer.py --uninstall-autostart  # désactive
+.venv/bin/python wrike_timer.py --install-autostart    # enable
+.venv/bin/python wrike_timer.py --uninstall-autostart  # disable
 ```
 
-Sur Linux, ça écrit un fichier dans `~/.config/autostart/`. Pour macOS/Windows, pas d'automatisation fournie (non testé) :
-- **macOS** : créer un LaunchAgent dans `~/Library/LaunchAgents/`.
-- **Windows** : raccourci dans le dossier Démarrage, ou clé de registre.
+On Linux, this writes a file to `~/.config/autostart/`. For macOS/Windows, no automation is provided (untested):
+- **macOS**: create a LaunchAgent in `~/Library/LaunchAgents/`.
+- **Windows**: shortcut in the Startup folder, or a registry key.
 
-## Développement
+## Development
 
 ```bash
 .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/pytest
 ```
 
-Vérification périodique des CVE sur les dépendances :
+Periodic check for CVEs in dependencies:
 ```bash
 .venv/bin/pip install pip-audit
 .venv/bin/pip-audit
 ```
 
-### Capture d'écran du tray avec des données factices
+### Screenshot of the tray with fake data
 
 ```bash
 .venv/bin/python scripts/fake_tray_screenshot.py
 ```
 
-Affiche l'icône avec un chrono actif et une liste de tickets fictifs (aucun token ni vraies données requis) — pratique pour illustrer le README ou une doc après une évolution du menu. `Ctrl+C` ou l'entrée "Quitter" du menu pour arrêter.
+Shows the icon with an active timer and a list of fake tasks (no token or real data required) — handy for illustrating the README or other docs after a menu change. `Ctrl+C` or the "Quit" entry in the menu to stop it.
 
-### CI (une fois poussé sur GitHub)
+### CI (once pushed to GitHub)
 
-`.github/workflows/ci.yml` fait tourner `pytest` sur Python 3.11 et 3.12 à chaque push/PR, plus un job `pip-audit` (non bloquant — juste un signal). Les tests ne dépendent d'aucune bibliothèque GTK/AppIndicator (la logique qui touche pystray est réduite au minimum et le reste est testé en pur Python), donc pas de setup particulier côté runner.
+`.github/workflows/ci.yml` runs `pytest` on Python 3.11 and 3.12 on every push/PR, plus a `pip-audit` job (non-blocking — just a signal). The tests don't depend on any GTK/AppIndicator library (the logic touching pystray is kept to a minimum and the rest is tested in pure Python), so no special runner setup is needed.
 
-`.github/dependabot.yml` ouvre automatiquement une PR chaque semaine si une dépendance (`requirements*.txt` ou les actions GitHub elles-mêmes) a une nouvelle version — la CI tourne dessus automatiquement, donc une mise à jour qui casse quelque chose se voit avant de merger. C'est la réponse à "comment on pense à mettre à jour" : Dependabot pense à ta place, tu n'as qu'à relire/merger les PR qu'il ouvre.
+`.github/dependabot.yml` automatically opens a PR every week if a dependency (`requirements*.txt` or the GitHub Actions themselves) has a new version — CI runs on it automatically, so an update that breaks something is visible before merging. That's the answer to "how do we remember to update": Dependabot remembers for you, you just review/merge the PRs it opens.
 
-## Limitations connues
+## Known limitations
 
-- **Pas de notion de "favoris".** L'API Wrike v4 n'expose ni champ, ni endpoint pour les tickets étoilés ("Starred tasks" est un smart folder purement côté UI Wrike, invisible depuis l'API) — impossible de les lire depuis cette app. La liste se limite aux tickets récents.
-- Le tooltip (icône survolée) affichant le chrono en direct est best-effort : son rendu dépend de l'implémentation StatusNotifierItem du thème/DE utilisé.
-- Le clic "démarrer/arrêter en un clic" se fait depuis le menu déroulant, pas par un clic direct sur l'icône : le protocole AppIndicator (GNOME/KDE) n'a pas de notion de clic gauche "action par défaut" distincte de l'ouverture du menu, contrairement à Windows.
+- **No notion of "favorites".** The Wrike v4 API exposes no field or endpoint for starred tasks ("Starred tasks" is a purely UI-side smart folder in Wrike, invisible from the API) — impossible to read them from this app. The list is limited to recent tasks.
+- The tooltip (icon hover) showing the live timer is best-effort: its rendering depends on the StatusNotifierItem implementation of the theme/DE in use.
+- The "start/stop in one click" happens from the dropdown menu, not by clicking the icon directly: the AppIndicator protocol (GNOME/KDE) has no notion of a left-click "default action" distinct from opening the menu, unlike Windows.
 
-## Sécurité
+## Security
 
-- `.gitignore` exclut `config.json`, `state.json` et les logs dès le premier commit — ne pas les forcer avec `git add -f`.
-- Voir [AGENTS.md](AGENTS.md) pour les règles complètes sur les données sensibles à ne jamais partager.
+- `.gitignore` excludes `config.json`, `state.json`, and logs from the very first commit — don't force them in with `git add -f`.
+- See [AGENTS.md](AGENTS.md) for the full rules on sensitive data that should never be shared.
 
-### Git hook de vérification
+### Verification git hook
 
-Un hook `pre-commit` (`.githooks/pre-commit`) vérifie que `config.example.json` ne contient jamais de vraies données (URL de feuille de temps réelle, token, etc.) au lieu de simples placeholders.
+A `pre-commit` hook (`.githooks/pre-commit`) checks that `config.example.json` never contains real data (a real timesheet URL, token, etc.) instead of plain placeholders.
 
-⚠️ Git ne l'active pas automatiquement au clonage — à faire une fois après `git clone` :
+⚠️ Git doesn't enable it automatically on clone — do this once after `git clone`:
 ```bash
 git config core.hooksPath .githooks
 ```
 
-C'est un contrôle **local uniquement** : la CI (voir ci-dessous) ne fait pas ce scan.
+This is a **local-only** check: CI (see above) does not run this scan.

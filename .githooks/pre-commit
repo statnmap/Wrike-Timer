@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pre-commit hook: refuse un commit qui met de vraies données dans config.example.json."""
+"""Pre-commit hook: rejects a commit that puts real data into config.example.json."""
 import json
 import re
 import subprocess
@@ -31,7 +31,7 @@ def main():
     try:
         data = json.loads(raw)
     except json.JSONDecodeError as exc:
-        print(f"⚠️  {EXAMPLE_FILE} n'est pas un JSON valide dans l'index : {exc}")
+        print(f"⚠️  {EXAMPLE_FILE} is not valid JSON in the index: {exc}")
         return 1
 
     problems = []
@@ -39,32 +39,32 @@ def main():
     unknown_keys = set(data) - KNOWN_KEYS
     if unknown_keys:
         problems.append(
-            f"clé(s) inattendue(s) {sorted(unknown_keys)} — {EXAMPLE_FILE} ne doit "
-            "contenir que des placeholders, jamais un token ou une donnée réelle."
+            f"unexpected key(s) {sorted(unknown_keys)} — {EXAMPLE_FILE} must only "
+            "contain placeholders, never a token or real data."
         )
 
     timesheet_url = data.get("timesheet_url", "")
     if timesheet_url:
         problems.append(
-            f"'timesheet_url' n'est pas vide ({timesheet_url!r}) — le placeholder "
-            'attendu est "".'
+            f"'timesheet_url' is not empty ({timesheet_url!r}) — the expected "
+            'placeholder is "".'
         )
 
     for key, value in data.items():
         if isinstance(value, str) and value and SUSPICIOUS_VALUE_RE.search(value):
             problems.append(
-                f"la valeur de '{key}' ressemble à une vraie donnée Wrike/un token : {value!r}"
+                f"the value of '{key}' looks like real Wrike data/a token: {value!r}"
             )
 
     if not problems:
         return 0
 
-    print(f"❌ Commit bloqué : {EXAMPLE_FILE} semble contenir de vraies données confidentielles.")
+    print(f"❌ Commit blocked: {EXAMPLE_FILE} appears to contain real confidential data.")
     for problem in problems:
         print(f"   - {problem}")
     print(
-        f"\nLes vraies valeurs vont dans ~/.config/wrike-timer/config.json (gitignoré), "
-        f"jamais dans {EXAMPLE_FILE}."
+        f"\nReal values go in ~/.config/wrike-timer/config.json (gitignored), "
+        f"never in {EXAMPLE_FILE}."
     )
     return 1
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Wrike Timer — chrono tray natif pour Wrike, sans service tiers."""
+"""Wrike Timer — native tray timer for Wrike, no third-party service."""
 
 import argparse
 import getpass
@@ -94,7 +94,7 @@ def main():
     token = config.get_token()
     cfg = config.load_config()
     if not token:
-        logging.getLogger(__name__).warning("Aucun token configuré, lancement en mode non configuré")
+        logging.getLogger(__name__).warning("No token configured, starting in unconfigured mode")
         tray_app.run_unconfigured()
         return 0
 
