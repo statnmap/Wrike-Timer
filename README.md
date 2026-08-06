@@ -4,6 +4,8 @@ Chrono de suivi de temps dans le tray système, qui parle uniquement à l'API Wr
 
 Le menu liste les 10 derniers tickets sur lesquels tu as loggé du temps ; un clic démarre le chrono, un clic sur l'entrée active l'arrête et pousse le temps vers Wrike. Il affiche aussi le total d'heures loggées aujourd'hui (tous tickets confondus, que ça vienne de l'app ou directement du site Wrike), et peut proposer un lien direct vers ta feuille de temps.
 
+![Menu du tray Wrike Timer](docs/tray-menu.png)
+
 ## Prérequis
 
 - Python 3.9+
@@ -93,6 +95,14 @@ Vérification périodique des CVE sur les dépendances :
 .venv/bin/pip install pip-audit
 .venv/bin/pip-audit
 ```
+
+### Capture d'écran du tray avec des données factices
+
+```bash
+.venv/bin/python scripts/fake_tray_screenshot.py
+```
+
+Affiche l'icône avec un chrono actif et une liste de tickets fictifs (aucun token ni vraies données requis) — pratique pour illustrer le README ou une doc après une évolution du menu. `Ctrl+C` ou l'entrée "Quitter" du menu pour arrêter.
 
 ### CI (une fois poussé sur GitHub)
 

@@ -8,6 +8,10 @@
 - Pour du debug avec de vraies données API, ne pas coller de réponse brute contenant des données réelles dans un fichier versionné ou un message partagé ; utiliser des données factices dans les tests.
 - `config.example.json` ne doit contenir que des valeurs placeholder, jamais une vraie URL/token — un hook pre-commit local le vérifie (voir README, section Sécurité).
 
+## Capture d'écran du menu tray
+
+Pour illustrer une évolution du menu (README, doc, PR) sans vrai token ni vraies données Wrike : `.venv/bin/python scripts/fake_tray_screenshot.py` affiche le tray avec un chrono actif et des tickets factices. Voir README, section Développement.
+
 ## Règles agents (toujours)
 
 - **Think before coding** : Don't assume. Don't hide confusion. Surface tradeoffs. If uncertain, ask.
