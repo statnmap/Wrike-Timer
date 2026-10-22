@@ -1,5 +1,5 @@
 requests==2.34.2
 pystray==0.19.5
-Pillow==12.3.0
+Pillow==13.0.0
 keyring==25.7.0
 secretstorage==3.5.0
