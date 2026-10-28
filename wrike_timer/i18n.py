@@ -25,6 +25,22 @@ _STRINGS = {
         "fr": "⚠ {count} envoi(s) en attente",
         "en": "⚠ {count} pending submission(s)",
     },
+    "confirm_started": {
+        "fr": "⚠ {hours} — début {start}",
+        "en": "⚠ {hours} — started {start}",
+    },
+    "confirm_dated": {
+        "fr": "⚠ {hours} — le {date}",
+        "en": "⚠ {hours} — on {date}",
+    },
+    "send_anyway": {
+        "fr": "📤 Envoyer quand même",
+        "en": "📤 Send anyway",
+    },
+    "discard": {
+        "fr": "🗑 Abandonner (je saisis à la main)",
+        "en": "🗑 Discard (I'll enter it by hand)",
+    },
     "refresh_list": {
         "fr": "🔄 Rafraîchir la liste",
         "en": "🔄 Refresh list",

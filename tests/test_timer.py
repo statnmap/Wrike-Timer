@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from wrike_timer import timer
 
@@ -97,3 +97,8 @@ def test_task_label_marks_completed_tasks():
 def test_task_label_leaves_other_statuses_untouched():
     assert timer.task_label("Fix bug", "Active") == "Fix bug"
     assert timer.task_label("Fix bug", None) == "Fix bug"
+
+
+def test_format_started_at():
+    epoch = datetime(2026, 10, 23, 14, 32).timestamp()
+    assert timer.format_started_at(epoch) == "23/10 14:32"
