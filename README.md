@@ -57,6 +57,8 @@ The icon appears in the tray. The menu lists the 10 most recently logged tasks; 
 
 If the submission fails (network down, API unavailable), tracked time is **never lost**: it stays in a local retry queue (visible in the menu as "⚠ N pending submission(s)") and is automatically retried on the next refresh, or manually by clicking the entry.
 
+An entry longer than 12 hours (typically a forgotten timer) is never sent automatically: it shows up in the menu with its start time, and you choose to send it anyway or discard it and enter the time by hand in Wrike.
+
 ## Configuration (`~/.config/wrike-timer/config.json`)
 
 | Key | Default | Description |

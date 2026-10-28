@@ -25,6 +25,10 @@ COLOR_UNCONFIGURED = (200, 160, 0, 255)
 # not that someone genuinely worked uninterrupted for that long.
 HEARTBEAT_GAP_WARNING_SECONDS = 5 * 60
 
+# An entry longer than this is almost certainly a forgotten timer: it is never
+# sent automatically, the user decides from the menu.
+CONFIRM_ABOVE_HOURS = 12
+
 
 def _make_icon(color):
     image = Image.new("RGBA", (ICON_SIZE, ICON_SIZE), (0, 0, 0, 0))
@@ -32,6 +36,17 @@ def _make_icon(color):
     margin = 6
     draw.ellipse((margin, margin, ICON_SIZE - margin, ICON_SIZE - margin), fill=color)
     return image
+
+
+def _needs_confirmation(entry):
+    return entry["hours"] > CONFIRM_ABOVE_HOURS
+
+
+def _confirm_label(entry):
+    hours = timer.format_hours(entry["hours"])
+    if entry.get("started_at"):
+        return i18n.t("confirm_started", hours=hours, start=timer.format_started_at(entry["started_at"]))
+    return i18n.t("confirm_dated", hours=hours, date=entry["tracked_date"])
 
 
 class TrayApp:
@@ -108,6 +123,11 @@ class TrayApp:
         self.store.save(self.state)
 
     def _post_or_queue(self, entry):
+        if _needs_confirmation(entry):
+            log.warning("Timelog for task=%s is %.2fh, waiting for confirmation", entry["task_id"], entry["hours"])
+            self.state["pending_timelogs"].append(entry)
+            self.store.save(self.state)
+            return
         try:
             self.client.post_timelog(entry["task_id"], entry["hours"], entry["tracked_date"], entry["comment"])
             log.info("Timelog posted: task=%s hours=%.2f", entry["task_id"], entry["hours"])
@@ -136,6 +156,7 @@ class TrayApp:
             "hours": round(timer.seconds_to_hours(duration_seconds), 4),
             "tracked_date": tracked_date,
             "comment": "",
+            "started_at": active.started_at,
         }
         self._post_or_queue(entry)
 
@@ -160,6 +181,9 @@ class TrayApp:
             pending = list(self.state.get("pending_timelogs", []))
             remaining = []
             for entry in pending:
+                if _needs_confirmation(entry):
+                    remaining.append(entry)
+                    continue
                 try:
                     self.client.post_timelog(entry["task_id"], entry["hours"], entry["tracked_date"], entry["comment"])
                     log.info("Retried timelog succeeded: task=%s", entry["task_id"])
@@ -169,6 +193,33 @@ class TrayApp:
             self.state["pending_timelogs"] = remaining
             self.store.save(self.state)
         self._refresh_icon_and_menu()
+
+    def _make_send_anyway_handler(self, entry):
+        def handler(icon, item):
+            with self.lock:
+                try:
+                    self.client.post_timelog(entry["task_id"], entry["hours"], entry["tracked_date"], entry["comment"])
+                except WrikeApiError:
+                    log.warning("Confirmed timelog still failing for task=%s", entry["task_id"], exc_info=True)
+                else:
+                    log.info("Confirmed timelog posted: task=%s hours=%.2f", entry["task_id"], entry["hours"])
+                    self._remove_pending(entry)
+            self._refresh_icon_and_menu()
+
+        return handler
+
+    def _make_discard_handler(self, entry):
+        def handler(icon, item):
+            with self.lock:
+                self._remove_pending(entry)
+                log.info("Timelog discarded: task=%s hours=%.2f", entry["task_id"], entry["hours"])
+            self._refresh_icon_and_menu()
+
+        return handler
+
+    def _remove_pending(self, entry):
+        self.state["pending_timelogs"] = [e for e in self.state["pending_timelogs"] if e != entry]
+        self.store.save(self.state)
 
     def _on_refresh(self, icon, item):
         self._refresh_recent_tasks()
@@ -224,8 +275,16 @@ class TrayApp:
         items.append(pystray.Menu.SEPARATOR)
 
         pending = self.state.get("pending_timelogs", [])
-        if pending:
-            items.append(pystray.MenuItem(i18n.t("pending_timelogs", count=len(pending)), self._on_retry_pending))
+        to_confirm = [e for e in pending if _needs_confirmation(e)]
+        to_retry = [e for e in pending if not _needs_confirmation(e)]
+        for entry in to_confirm:
+            submenu = pystray.Menu(
+                pystray.MenuItem(i18n.t("send_anyway"), self._make_send_anyway_handler(entry)),
+                pystray.MenuItem(i18n.t("discard"), self._make_discard_handler(entry)),
+            )
+            items.append(pystray.MenuItem(_confirm_label(entry), submenu))
+        if to_retry:
+            items.append(pystray.MenuItem(i18n.t("pending_timelogs", count=len(to_retry)), self._on_retry_pending))
 
         items.append(pystray.MenuItem(i18n.t("refresh_list"), self._on_refresh))
         if self.cfg.get("timesheet_url"):

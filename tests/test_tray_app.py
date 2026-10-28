@@ -1,3 +1,5 @@
+import time
+
 import pytest
 
 from wrike_timer import tray_app as tray_app_module
@@ -106,3 +108,74 @@ def test_build_menu_respects_language_config(tmp_path, monkeypatch):
 
     assert "Quitter" in labels
     assert "Quit" not in labels
+
+
+def _long_entry(**overrides):
+    return {"task_id": "A", "hours": 70.0, "tracked_date": "2026-10-23", "comment": "", "started_at": 1_000_000.0, **overrides}
+
+
+def test_stop_over_threshold_queues_without_posting(tmp_path, monkeypatch):
+    app = make_app(tmp_path, monkeypatch, recent_tasks=[TASK_A])
+    app._switch_to_task(TASK_A)
+    app.active_timer.started_at -= 13 * 3600
+
+    app._on_stop(None, None)
+
+    assert app.client.posted == []
+    assert len(app.state["pending_timelogs"]) == 1
+    assert app.state["pending_timelogs"][0]["started_at"] == pytest.approx(time.time() - 13 * 3600, abs=5)
+
+
+def test_retry_skips_entries_over_threshold(tmp_path, monkeypatch):
+    app = make_app(tmp_path, monkeypatch)
+    long_entry = _long_entry()
+    app.state["pending_timelogs"] = [long_entry, _long_entry(hours=1.0)]
+
+    app._on_retry_pending(None, None)
+
+    assert [p["hours"] for p in app.client.posted] == [1.0]
+    assert app.state["pending_timelogs"] == [long_entry]
+
+
+def test_send_anyway_posts_and_removes_entry(tmp_path, monkeypatch):
+    app = make_app(tmp_path, monkeypatch)
+    entry = _long_entry()
+    app.state["pending_timelogs"] = [entry]
+
+    app._make_send_anyway_handler(entry)(None, None)
+
+    assert len(app.client.posted) == 1
+    assert app.state["pending_timelogs"] == []
+
+
+def test_send_anyway_keeps_entry_when_post_fails(tmp_path, monkeypatch):
+    app = make_app(tmp_path, monkeypatch)
+    entry = _long_entry()
+    app.state["pending_timelogs"] = [entry]
+    app.client.raise_on_post = True
+
+    app._make_send_anyway_handler(entry)(None, None)
+
+    assert app.state["pending_timelogs"] == [entry]
+
+
+def test_discard_removes_entry_without_posting(tmp_path, monkeypatch):
+    app = make_app(tmp_path, monkeypatch)
+    entry = _long_entry()
+    app.state["pending_timelogs"] = [entry]
+
+    app._make_discard_handler(entry)(None, None)
+
+    assert app.client.posted == []
+    assert app.state["pending_timelogs"] == []
+
+
+def test_build_menu_shows_confirmation_entries_with_and_without_start(tmp_path, monkeypatch):
+    app = make_app(tmp_path, monkeypatch)
+    app.state["pending_timelogs"] = [_long_entry(), _long_entry(started_at=None, hours=30.0)]
+
+    labels = [item.text for item in app._build_menu()]
+
+    assert any(label.startswith("⚠ 70h00 — started ") for label in labels)
+    assert "⚠ 30h00 — on 2026-10-23" in labels
+    assert not any("pending submission" in label for label in labels)

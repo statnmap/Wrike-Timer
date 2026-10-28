@@ -2,7 +2,7 @@
 
 import time
 from dataclasses import asdict, dataclass
-from datetime import date
+from datetime import date, datetime
 
 
 @dataclass
@@ -73,6 +73,10 @@ def format_hours(total_hours):
     total_minutes = round(total_hours * 60)
     hours, minutes = divmod(total_minutes, 60)
     return f"{hours}h{minutes:02d}"
+
+
+def format_started_at(epoch):
+    return datetime.fromtimestamp(epoch).strftime("%d/%m %H:%M")
 
 
 def task_label(title, status):
